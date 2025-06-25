@@ -1,0 +1,39 @@
+name: Helm Chart Release Template
+
+on:
+  workflow_call:
+    inputs:
+      chart_path:
+        required: true
+        type: string
+      release_dir:
+        required: false
+        type: string
+        default: "."
+      repo_url:
+        required: true
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p packaged
+          helm package ${{ inputs.chart_path }} -d packaged
+          helm repo index packaged --url ${{ inputs.repo_url }}
+
+      - name: Push to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: packaged
