@@ -6,10 +6,6 @@ on:
       chart_path:
         required: true
         type: string
-      release_dir:
-        required: false
-        type: string
-        default: "."
       repo_url:
         required: true
         type: string
@@ -17,6 +13,11 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -31,9 +32,23 @@ jobs:
           helm package ${{ inputs.chart_path }} -d packaged
           helm repo index packaged --url ${{ inputs.repo_url }}
 
-      - name: Push to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: packaged
+          path: packaged
+
+  deploy:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
